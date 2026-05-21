@@ -463,44 +463,121 @@
 
   <!-- ════ RÉCLAMATION ════ -->
   <div id="reclamation" class="page">
-    <div class="pinner">
-      <div class="pt">Réclamation</div>
-      <div id="rForm">
-        <div class="frow">
-          <div class="fg"><label class="fl">Nom complet</label><input type="text" class="fi" id="rNom" placeholder="Votre nom"></div>
-          <div class="fg"><label class="fl">Email / Téléphone</label><input type="text" class="fi" id="rEmail" placeholder="+261 34 00 000 00"></div>
-        </div>
-        <div class="fg"><label class="fl">N° de commande</label><input type="text" class="fi" id="rCmd" placeholder="#CMD-001"></div>
+  <div class="pinner">
+    <div class="pt">Réclamation</div>
+
+    <form id="rForm" method="POST" enctype="multipart/form-data" action="reclamation.php">
+
+      <div class="frow">
+
         <div class="fg">
-          <label class="fl">Type de réclamation</label>
-          <select class="fsel" id="rType">
-            <option value="">— Sélectionnez —</option>
-            <option>Produit défectueux</option><option>Retard de livraison</option>
-            <option>Produit manquant</option><option>Mauvaise taille / couleur</option>
-            <option>Autre</option>
-          </select>
+          <label class="fl">Nom complet</label>
+          <input 
+            type="text" 
+            class="fi" 
+            id="rNom" 
+            placeholder="Votre nom" 
+            name="nom"
+          >
         </div>
-        <div class="fg"><label class="fl">Description</label><textarea class="fta" id="rDesc" placeholder="Décrivez votre problème en détail…"></textarea></div>
+
         <div class="fg">
-          <label class="fl">Photos (optionnel)</label>
-          <input type="file" id="rPhotos" accept="image/*" multiple style="display:none">
-          <button type="button" onclick="document.getElementById('rPhotos').click()"
-            style="width:100%;background:transparent;border:1px dashed rgba(200,255,0,.22);color:var(--muted);font-family:'Space Grotesk',sans-serif;font-size:.83rem;padding:.95rem;border-radius:var(--rs);cursor:pointer;transition:all .25s;"
-            onmouseover="this.style.borderColor='rgba(200,255,0,.5)';this.style.color='var(--acid)'"
-            onmouseout="this.style.borderColor='rgba(200,255,0,.22)';this.style.color='var(--muted)'">
-            + Ajouter des photos
-          </button>
-          <div id="rPinfo" style="margin-top:.38rem;font-size:.7rem;color:var(--muted);"></div>
+          <label class="fl">Email / Téléphone</label>
+          <input 
+            type="text" 
+            class="fi" 
+            id="rEmail" 
+            placeholder="+261 34 00 000 00" 
+            name="email"
+          >
         </div>
-        <button class="btn-acid" style="width:100%;font-size:.92rem;padding:.95rem;" onclick="subRecl()">Envoyer la réclamation</button>
+
       </div>
-      <div class="sov" id="rOk">
-        <div class="sico">✓</div>
-        <div class="stitle">Réclamation envoyée !</div>
-        <p class="ssub">Nous vous répondrons sous 24–48h.</p>
+
+      <div class="fg">
+        <label class="fl">N° de commande</label>
+
+        <input 
+          name="CommandeNumero" 
+          type="text" 
+          class="fi" 
+          id="rCmd" 
+          placeholder="#CMD-001"
+        >
       </div>
+
+      <div class="fg">
+        <label class="fl">Type de réclamation</label>
+
+        <select class="fsel" id="rType" name="type_reclamation">
+          <option value="">— Sélectionnez —</option>
+          <option>Produit défectueux</option>
+          <option>Retard de livraison</option>
+          <option>Produit manquant</option>
+          <option>Mauvaise taille / couleur</option>
+          <option>Autre</option>
+        </select>
+      </div>
+
+      <div class="fg">
+        <label class="fl">Description</label>
+
+        <textarea 
+          name="description" 
+          class="fta" 
+          id="rDesc" 
+          placeholder="Décrivez votre problème en détail…"
+        ></textarea>
+      </div>
+
+      <div class="fg">
+
+        <label class="fl">Photos (optionnel)</label>
+
+        <input 
+          type="file" 
+          id="rPhotos" 
+          accept="image/*" 
+          multiple 
+          style="display:none"
+          name="photo"
+        >
+
+        <button 
+          type="button" 
+          onclick="document.getElementById('rPhotos').click()"
+          style="width:100%;background:transparent;border:1px dashed rgba(200,255,0,.22);color:var(--muted);font-family:'Space Grotesk',sans-serif;font-size:.83rem;padding:.95rem;border-radius:var(--rs);cursor:pointer;transition:all .25s;"
+          onmouseover="this.style.borderColor='rgba(200,255,0,.5)';this.style.color='var(--acid)'"
+          onmouseout="this.style.borderColor='rgba(200,255,0,.22)';this.style.color='var(--muted)'"
+          name="ajouter"
+        >
+          + Ajouter des photos
+
+        </button>
+
+        <div id="rPinfo" style="margin-top:.38rem;font-size:.7rem;color:var(--muted);"></div>
+
+      </div>
+
+      <button 
+        type="submit"
+        class="btn-acid"
+        style="width:100%;font-size:.92rem;padding:.95rem;">
+
+        Envoyer la réclamation
+
+      </button>
+
+    </form>
+
+    <div class="sov" id="rOk">
+      <div class="sico">✓</div>
+      <div class="stitle">Réclamation envoyée !</div>
+      <p class="ssub">Nous vous répondrons sous 24–48h.</p>
     </div>
+
   </div>
+</div>
 
 </main>
 
