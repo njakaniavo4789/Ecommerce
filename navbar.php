@@ -259,6 +259,7 @@ nav{
     <a href="marketing.php"><i class="fas fa-bullhorn"></i><span>Marketing</span></a>
     <a href="client.php"><i class="fas fa-users"></i><span>Clients</span></a>
     <a href="commande.php"><i class="fas fa-shopping-cart"></i><span>Commandes</span></a>
+    <a href="reclamations.php"><i class="fas fa-exclamation-triangle"></i><span>Réclamations</span></a>
   </div>
 
   <div class="right-section">
