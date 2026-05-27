@@ -405,9 +405,9 @@
             <span class="pprice"><?= number_format($pFinal,0,',',' ') ?> Ar</span>
             <?php if($red>0): ?><span class="pold"><?= number_format($pOrig,0,',',' ') ?> Ar</span><?php endif; ?>
           </div>
-          <a class="btnadd" href="Ajouterpanier.php?id=<?= $prod['id'] ?>">
+          <button class="btnadd" onclick="addToCart(<?= $prod['id'] ?>)">
                Ajouter au panier
-          </a>
+          </button>
         </div>
       </div>
 <?php endforeach; ?>
@@ -616,14 +616,12 @@ document.querySelectorAll('.rv').forEach(el=>ro.observe(el));
 /* STATE */
 let cart = <?= json_encode(array_values(array_map(function($item) {
     return [
-        'cart_id' => $item['id'] . '_' . $item['quantite'],
         'id'    => (int)$item['id'],
         'name'  => $item['nom'],
         'price' => (float)$item['prix'] * (int)$item['quantite'],
         'orig'  => (float)$item['prix'],
         'img'   => $item['image'] ?? 'images/placeholder.jpg',
         'qty'   => (int)$item['quantite'],
-        'disc'  => 0
     ];
 }, $cartData))) ?>;
 let spinsLeft = 3, curDisc = 0;
@@ -633,13 +631,33 @@ function nav(id){document.querySelectorAll('.page').forEach(p=>p.style.display='
 function act(b){document.querySelectorAll('.ntabs button').forEach(x=>x.classList.remove('act'));b.classList.add('act');}
 function selPay(el, mode){document.querySelectorAll('.pm').forEach(m=>m.classList.remove('sel'));el.classList.add('sel');document.getElementById('modePaiement').value=mode;}
 
-/* CART */
-function addCart(name,price,orig,img){
-  let fp=price;if(curDisc>0)fp=Math.round(price*(1-curDisc/100));
-  cart.push({name,price:fp,orig,img,id:Date.now(),disc:curDisc});
-  updateN();notify('✓',name+' ajouté'+(curDisc>0?' (−'+curDisc+'%)':''));
+/* CART AJAX */
+function addToCart(id){
+  fetch('Ajouterpanier.php?id='+id+'&ajax=1')
+    .then(r=>r.json())
+    .then(d=>{
+      if(!d.ok){notify('!','Erreur');return;}
+      const idx=cart.findIndex(it=>it.id===id);
+      if(idx>-1){
+        cart[idx].qty++;
+        cart[idx].price=cart[idx].orig*cart[idx].qty;
+      } else {
+        cart.push({id,name:d.item.nom,orig:d.item.prix,price:d.item.prix,img:d.item.image,qty:1});
+      }
+      updateN();notify('✓',d.item.nom+' ajouté');
+      renderCart();
+    });
 }
-function rmCart(id){window.location='Ajouterpanier.php?remove='+id;}
+function rmCart(id){
+  fetch('Ajouterpanier.php?remove='+id+'&ajax=1')
+    .then(r=>r.json())
+    .then(d=>{
+      if(!d.ok)return;
+      const idx=cart.findIndex(it=>it.id===id);
+      if(idx>-1)cart.splice(idx,1);
+      updateN();renderCart();notify('✕','Article retiré');
+    });
+}
 function updateN(){document.getElementById('cartCount').textContent=cart.length;}
 function renderCart(){
   const box=document.getElementById('cartItems'),sum=document.getElementById('cartSum');
