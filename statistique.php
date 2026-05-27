@@ -37,11 +37,15 @@ body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;backg
 .stat-icon.orange{background:rgba(255,107,0,0.12);color:var(--neon-orange);}
 .stat-value{font-family:'Orbitron',monospace;font-size:1.8rem;font-weight:900;margin-bottom:4px;background:linear-gradient(90deg,#fff,var(--neon-cyan));-webkit-background-clip:text;background-clip:text;color:transparent;}
 .stat-label{color:var(--muted);font-size:.82rem;text-transform:uppercase;letter-spacing:2px;}
+.stat-sub{font-size:.72rem;color:var(--muted);margin-top:6px;}
 .charts-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(450px,1fr));gap:25px;margin-bottom:40px;}
 .chart-card,.table-card{background:linear-gradient(145deg,var(--card),rgba(20,0,40,0.65));border:1px solid var(--border);border-radius:20px;padding:28px;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);transition:all .4s ease;animation:fadeUp .6s ease both;}
 .chart-card:hover,.table-card:hover{border-color:rgba(0,255,249,0.25);box-shadow:0 8px 40px rgba(0,255,249,0.05);}
 .chart-card h3,.table-card h3{font-family:'Orbitron',monospace;font-size:1.1rem;margin-bottom:18px;color:var(--neon-cyan);display:flex;align-items:center;gap:10px;}
 .chart-card canvas{width:100% !important;height:300px !important;}
+.chart-card .chart-rows{display:flex;flex-wrap:wrap;gap:12px;margin-top:15px;}
+.chart-card .chart-rows .cr{display:flex;align-items:center;gap:8px;font-size:.78rem;color:var(--muted);}
+.chart-card .chart-rows .cr .dot{width:10px;height:10px;border-radius:50%;}
 .table-wrap{overflow-x:auto;border-radius:14px;}
 table{width:100%;border-collapse:separate;border-spacing:0;margin-top:5px;min-width:600px;}
 th{padding:13px 15px;text-align:left;color:var(--muted);font-size:.72rem;text-transform:uppercase;letter-spacing:2px;font-weight:600;border-bottom:1px solid var(--border);background:rgba(0,255,249,0.03);}
@@ -64,14 +68,15 @@ tr:last-child td{border-bottom:none;}
 <?php include 'navbar.php'; ?>
 <?php require 'connectionBD.php';
 
+// --- Aggréger les stats depuis les commandes ---
 $total_cmd = $pdo->query("SELECT COUNT(*) FROM commandes")->fetchColumn();
 $total_rev = $pdo->query("SELECT COALESCE(SUM(total),0) FROM commandes")->fetchColumn();
 $total_prod = $pdo->query("SELECT COUNT(*) FROM produit")->fetchColumn();
 $total_promo = $pdo->query("SELECT COUNT(*) FROM marketing")->fetchColumn();
-$orders = $pdo->query("SELECT * FROM commandes ORDER BY date_commande DESC LIMIT 5")->fetchAll();
-
-$labels = ['en_attente'=>'En attente','en_cours'=>'En cours','expedie'=>'Expédié','livre'=>'Livré','annule'=>'Annulé'];
-$badge_classes = ['en_attente'=>'en_attente','en_cours'=>'en_cours','expedie'=>'expedie','livre'=>'livre','annule'=>'annule'];
+$mois_rev = $pdo->query("SELECT COALESCE(SUM(total),0) FROM commandes WHERE MONTH(date_commande)=MONTH(CURDATE()) AND YEAR(date_commande)=YEAR(CURDATE())")->fetchColumn();
+$mois_cmd = $pdo->query("SELECT COUNT(*) FROM commandes WHERE MONTH(date_commande)=MONTH(CURDATE()) AND YEAR(date_commande)=YEAR(CURDATE())")->fetchColumn();
+$mois_prec_rev = $pdo->query("SELECT COALESCE(SUM(total),0) FROM commandes WHERE MONTH(date_commande)=MONTH(CURDATE())-1 AND YEAR(date_commande)=YEAR(CURDATE())")->fetchColumn();
+$evol_pct = $mois_prec_rev > 0 ? round(($mois_rev - $mois_prec_rev) / $mois_prec_rev * 100) : 100;
 
 $stats = $pdo->query("SELECT statut, COUNT(*) as cnt FROM commandes GROUP BY statut")->fetchAll(PDO::FETCH_KEY_PAIR);
 $en_attente = $stats['en_attente'] ?? 0;
@@ -79,13 +84,31 @@ $en_cours = $stats['en_cours'] ?? 0;
 $expedie = $stats['expedie'] ?? 0;
 $livre = $stats['livre'] ?? 0;
 $annule = $stats['annule'] ?? 0;
+
+// --- Données des graphiques depuis stats_ventes ---
+$ventes_mensuelles = $pdo->query("SELECT DATE_FORMAT(date,'%b') as mois, SUM(total_ventes) as total, SUM(nombre_commandes) as nb FROM stats_ventes GROUP BY YEAR(date), MONTH(date) ORDER BY YEAR(date), MONTH(date) LIMIT 12")->fetchAll();
+$mois_labels = []; $mois_data = [];
+foreach ($ventes_mensuelles as $v) { $mois_labels[] = $v['mois']; $mois_data[] = (float)$v['total']; }
+
+// Top produits depuis stats_produits
+$top_produits = $pdo->query("SELECT produit_nom, SUM(total_vendu) as total FROM stats_produits GROUP BY produit_id ORDER BY total DESC LIMIT 8")->fetchAll();
+$prod_labels = []; $prod_data = []; $prod_colors = ['#00fff9','#ff006e','#c800ff','#ff6b00','#00ff9d','#eab308','#6366f1','#f97316'];
+foreach ($top_produits as $i=>$p) { $prod_labels[] = $p['produit_nom']; $prod_data[] = (int)$p['total']; }
+
+// Stats paiements
+$paiements = $pdo->query("SELECT mode_paiement, SUM(total) as total, SUM(nombre) as nb FROM stats_paiements GROUP BY mode_paiement ORDER BY total DESC")->fetchAll();
+
+// Dernières commandes
+$orders = $pdo->query("SELECT * FROM commandes ORDER BY date_commande DESC LIMIT 5")->fetchAll();
+$labels = ['en_attente'=>'En attente','en_cours'=>'En cours','expedie'=>'Expédié','livre'=>'Livré','annule'=>'Annulé'];
+$badge_classes = ['en_attente'=>'en_attente','en_cours'=>'en_cours','expedie'=>'expedie','livre'=>'livre','annule'=>'annule'];
 ?>
 
 <div class="container">
 <div class="glow-line"></div>
 <div class="page-header">
   <h1 class="page-title">📊 TABLEAU DE BORD</h1>
-  <p class="page-subtitle">Statistiques et rapports en temps réel</p>
+  <p class="page-subtitle">Statistiques en temps réel · Données stockées en base</p>
 </div>
 
 <div class="stats-grid">
@@ -93,11 +116,13 @@ $annule = $stats['annule'] ?? 0;
     <div class="stat-icon cyan"><i class="fas fa-shopping-cart"></i></div>
     <div class="stat-value"><?= $total_cmd ?></div>
     <div class="stat-label">Commandes Totales</div>
+    <div class="stat-sub"><?= $mois_cmd ?> ce mois</div>
   </div>
   <div class="stat-card" style="animation-delay:.06s">
     <div class="stat-icon pink"><i class="fas fa-money-bill-wave"></i></div>
     <div class="stat-value"><?= number_format($total_rev/1000000,1) ?>M</div>
     <div class="stat-label">Revenus Totals</div>
+    <div class="stat-sub"><?= number_format($mois_rev/1000000,1) ?>M ce mois <?= $evol_pct>=0?'(+':'('.$evol_pct.'%)'?></div>
   </div>
   <div class="stat-card" style="animation-delay:.09s">
     <div class="stat-icon purple"><i class="fas fa-boxes"></i></div>
@@ -123,18 +148,38 @@ $annule = $stats['annule'] ?? 0;
 
 <div class="charts-grid">
   <div class="chart-card" style="animation-delay:.1s">
-    <h3>📈 Ventes</h3>
+    <h3>📈 Ventes Mensuelles</h3>
     <canvas id="chartVentes"></canvas>
   </div>
   <div class="chart-card" style="animation-delay:.15s">
-    <h3>🏆 Top Produits</h3>
+    <h3>🏆 Top Produits Vendus</h3>
     <canvas id="chartProduits"></canvas>
+    <?php if(!empty($prod_labels)): ?>
+    <div class="chart-rows">
+      <?php foreach($top_produits as $i=>$p): ?>
+      <div class="cr"><span class="dot" style="background:<?=$prod_colors[$i]??'#6366f1'?>"></span> <?=htmlspecialchars($p['produit_nom'])?>: <strong><?=$p['total']?></strong></div>
+      <?php endforeach; ?>
+    </div>
+    <?php endif; ?>
   </div>
 </div>
 
-<div class="chart-card" style="margin-bottom:40px;animation-delay:.2s">
-  <h3>🥧 Répartition des Commandes</h3>
-  <canvas id="chartStatus"></canvas>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:25px;margin-bottom:40px;">
+  <div class="chart-card" style="animation-delay:.2s">
+    <h3>🥧 Statut des Commandes</h3>
+    <canvas id="chartStatus"></canvas>
+  </div>
+  <div class="chart-card" style="animation-delay:.2s">
+    <h3>💳 Paiements</h3>
+    <canvas id="chartPaiements"></canvas>
+    <?php if(!empty($paiements)): ?>
+    <div class="chart-rows">
+      <?php foreach($paiements as $p): ?>
+      <div class="cr"><span class="dot" style="background:<?=['#00fff9','#ff006e','#c800ff','#00ff9d','#ff6b00'][array_search($p['mode_paiement'],array_column($paiements,'mode_paiement'))%5]?>"></span> <?=htmlspecialchars($p['mode_paiement'] ?? 'Inconnu')?>: <strong><?=number_format($p['total'],0,',',' ')?> Ar</strong> (<?=$p['nb']?> cmd)</div>
+      <?php endforeach; ?>
+    </div>
+    <?php endif; ?>
+  </div>
 </div>
 
 <div class="table-card" style="animation-delay:.25s">
@@ -165,10 +210,10 @@ Chart.defaults.borderColor = 'rgba(0,255,249,0.15)';
 new Chart(document.getElementById('chartVentes'),{
   type:'line',
   data:{
-    labels:['Jan','Fév','Mar','Avr','Mai','Juin'],
+    labels:<?=json_encode($mois_labels)?>,
     datasets:[{
       label:'Ventes (Ar)',
-      data:[12000000,15000000,18500000,14000000,21000000,25000000],
+      data:<?=json_encode($mois_data)?>,
       borderColor:'#00fff9',
       backgroundColor:'rgba(0,255,249,0.1)',
       fill:true,tension:0.4,
@@ -176,17 +221,17 @@ new Chart(document.getElementById('chartVentes'),{
     }]
   },
   options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
-    scales:{y:{grid:{color:'rgba(0,255,249,0.1)'},ticks:{callback:v=>v/1000000+'M'}},x:{grid:{color:'rgba(0,255,249,0.1)'}}}}
+    scales:{y:{grid:{color:'rgba(0,255,249,0.1)'},ticks:{callback:v=>v>=1000000?(v/1000000)+'M':v>=1000?(v/1000)+'k':v}},x:{grid:{color:'rgba(0,255,249,0.1)'}}}}
 });
 
 new Chart(document.getElementById('chartProduits'),{
   type:'bar',
   data:{
-    labels:['iPhone 15','MacBook','AirPods','Samsung S24'],
-    datasets:[{label:'Ventes',data:[85,62,45,38],backgroundColor:['#00fff9','#ff006e','#c800ff','#ff6b00'],borderRadius:8,borderSkipped:false}]
+    labels:<?=json_encode($prod_labels)?>,
+    datasets:[{label:'Vendus',data:<?=json_encode($prod_data)?>,backgroundColor:<?=json_encode(array_slice($prod_colors,0,count($prod_labels)))?>,borderRadius:8,borderSkipped:false}]
   },
   options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
-    scales:{y:{grid:{color:'rgba(0,255,249,0.1)'}},x:{grid:{display:false}}}}
+    scales:{y:{grid:{color:'rgba(0,255,249,0.1)'},ticks:{stepSize:1}},x:{grid:{display:false}}}
 });
 
 new Chart(document.getElementById('chartStatus'),{
@@ -194,6 +239,15 @@ new Chart(document.getElementById('chartStatus'),{
   data:{
     labels:['Livrées','En cours','En attente','Expédiées','Annulées'],
     datasets:[{data:[<?=$livre?>,<?=$en_cours?>,<?=$en_attente?>,<?=$expedie?>,<?=$annule?>],backgroundColor:['#00ff9d','#ff6b00','#00fff9','#c800ff','#ff006e'],borderWidth:0,hoverOffset:10}]
+  },
+  options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{padding:18,usePointStyle:true,pointStyle:'circle'}}},cutout:'70%'}
+});
+
+new Chart(document.getElementById('chartPaiements'),{
+  type:'doughnut',
+  data:{
+    labels:<?=json_encode(array_map(function($p){return $p['mode_paiement']??'Inconnu';},$paiements))?>,
+    datasets:[{data:<?=json_encode(array_map(function($p){return (float)$p['total'];},$paiements))?>,backgroundColor:['#00fff9','#ff006e','#c800ff','#00ff9d','#ff6b00'],borderWidth:0,hoverOffset:10}]
   },
   options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'right',labels:{padding:18,usePointStyle:true,pointStyle:'circle'}}},cutout:'70%'}
 });

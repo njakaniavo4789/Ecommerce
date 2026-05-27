@@ -39,6 +39,15 @@ try {
     }
 
     $pdo->commit();
+
+    // Mettre à jour les stats
+    $date = date('Y-m-d');
+    $pdo->prepare("INSERT INTO stats_ventes (date, total_ventes, nombre_commandes) VALUES (?,?,?) ON DUPLICATE KEY UPDATE total_ventes=total_ventes+?, nombre_commandes=nombre_commandes+1")->execute([$date, $total, 1, $total]);
+    foreach ($_SESSION['panier'] as $item) {
+        $pdo->prepare("INSERT INTO stats_produits (produit_id, produit_nom, total_vendu, date) VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE total_vendu=total_vendu+?")->execute([$item['id'], $item['nom'], $item['quantite'], $date, $item['quantite']]);
+    }
+    $pdo->prepare("INSERT INTO stats_paiements (mode_paiement, total, nombre, date) VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE total=total+?, nombre=nombre+1")->execute([$mode_paiement, $total, 1, $date, $total]);
+
     $_SESSION['panier'] = [];
     header("Location: boutique.php?success=1#payOk");
 } catch (Exception $e) {
