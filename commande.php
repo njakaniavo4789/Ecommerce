@@ -27,78 +27,134 @@ body::before{content:'';position:fixed;top:0;left:0;width:100%;height:100%;backg
 .page-title{font-family:'Orbitron',monospace;font-size:clamp(2rem,5vw,3rem);background:linear-gradient(90deg,var(--neon-cyan),var(--neon-pink),var(--neon-purple));-webkit-background-clip:text;background-clip:text;color:transparent;}
 .glow-line{height:4px;background:linear-gradient(90deg,var(--neon-cyan),var(--neon-pink),var(--neon-purple));border-radius:2px;margin-bottom:30px;animation:glow 2s linear infinite;background-size:200%;}
 @keyframes glow{0%{background-position:0% 50%}100%{background-position:200% 50%}}
-.card{background:linear-gradient(145deg,var(--card),rgba(20,0,40,0.8));border:2px solid var(--border);border-radius:20px;padding:30px;margin-bottom:25px;}
+.card{background:linear-gradient(145deg,var(--card),rgba(20,0,40,0.8));border:2px solid var(--border);border-radius:20px;padding:30px;margin-bottom:25px;overflow-x:auto;}
 .card h2{font-family:'Orbitron',monospace;font-size:1.3rem;margin-bottom:20px;color:var(--neon-cyan);}
-table{width:100%;border-collapse:collapse;margin-top:15px;}
-th,td{padding:15px;border-bottom:1px solid var(--border);}
+table{width:100%;border-collapse:collapse;margin-top:15px;min-width:750px;}
+th,td{padding:15px;text-align:left;border-bottom:1px solid var(--border);}
 th{color:var(--muted);font-size:0.8rem;text-transform:uppercase;letter-spacing:2px;font-weight:600;}
 .badge{display:inline-block;padding:6px 14px;border-radius:30px;font-size:0.75rem;font-weight:700;text-transform:uppercase;}
-.badge.pending{background:rgba(0,255,249,0.15);color:var(--neon-cyan);}
-.badge.delivered{background:rgba(0,255,157,0.15);color:var(--success);}
-.badge.cancelled{background:rgba(255,0,110,0.15);color:var(--neon-pink);}
-.badge.processing{background:rgba(255,107,0,0.15);color:var(--neon-orange);}
-.btn{padding:10px 18px;border-radius:12px;border:none;cursor:pointer;font-weight:600;transition:all 0.3s ease;}
-.btn-danger{background:linear-gradient(135deg,var(--danger),#b91c1c);color:#fff;}
-.btn-danger:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(239,68,68,0.4);}
-.order-id{font-family:'Orbitron',monospace;color:var(--neon-cyan);font-weight:700;}
+.badge.en_attente{background:rgba(0,255,249,0.15);color:var(--neon-cyan);}
+.badge.en_cours{background:rgba(255,107,0,0.15);color:var(--neon-orange);}
+.badge.expedie{background:rgba(200,0,255,0.15);color:var(--neon-purple);}
+.badge.livre{background:rgba(0,255,157,0.15);color:var(--success);}
+.badge.annule{background:rgba(255,0,110,0.15);color:var(--neon-pink);}
+.btn-s{padding:8px 14px;border-radius:10px;border:none;cursor:pointer;font-weight:600;font-size:.8rem;transition:all .3s;}
+.btn-cyan{background:linear-gradient(135deg,var(--neon-cyan),#009999);color:#000;margin-right:5px;}
+.btn-cyan:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(0,255,249,.3);}
+.btn-pink{background:linear-gradient(135deg,var(--neon-pink),#990066);color:#fff;}
+.btn-pink:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(255,0,110,.3);}
+.order-id{font-family:'Orbitron',monospace;color:var(--neon-cyan);font-weight:700;font-size:.85rem;}
 .order-amount{font-weight:700;color:var(--neon-pink);}
+.status-form{display:inline-block;}
+.status-form select{padding:6px 10px;border-radius:8px;background:rgba(255,255,255,.05);color:var(--text);border:1px solid var(--border);font-size:.8rem;}
+.empty-state{text-align:center;padding:50px 0;color:var(--muted);}
+.empty-state .ico{font-size:3rem;margin-bottom:15px;}
 </style>
 </head>
 <body>
 <?php include 'navbar.php'; ?>
+<?php require 'connectionBD.php'; ?>
 
 <div class="container">
 <div class="glow-line"></div>
 
 <div class="page-header">
-  <h1 class="page-title">🛒 GESTION DES COMMANDES</h1>
+  <h1 class="page-title"><i class="fas fa-truck"></i> GESTION DES COMMANDES</h1>
+</div>
+
+<?php
+// Delete order
+if (isset($_GET['delete'])) {
+    $id = (int)$_GET['delete'];
+    $pdo->prepare("DELETE FROM commandes WHERE id = ?")->execute([$id]);
+    echo '<script>window.location="commande.php";</script>';
+    exit();
+}
+
+// Update status
+if (isset($_GET['update']) && isset($_GET['statut'])) {
+    $id = (int)$_GET['update'];
+    $statut = $_GET['statut'];
+    $allowed = ['en_attente','en_cours','expedie','livre','annule'];
+    if (in_array($statut, $allowed)) {
+        $pdo->prepare("UPDATE commandes SET statut = ? WHERE id = ?")->execute([$statut, $id]);
+        echo '<script>window.location="commande.php";</script>';
+        exit();
+    }
+}
+
+$orders = $pdo->query("SELECT * FROM commandes ORDER BY date_commande DESC")->fetchAll();
+$stats = $pdo->query("SELECT statut, COUNT(*) as cnt FROM commandes GROUP BY statut")->fetchAll(PDO::FETCH_KEY_PAIR);
+$total_cmd = count($orders);
+$total_rev = $pdo->query("SELECT COALESCE(SUM(total),0) FROM commandes")->fetchColumn();
+?>
+
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:20px;margin-bottom:30px;">
+  <div class="card" style="text-align:center;">
+    <div style="font-size:2rem;color:var(--neon-cyan);"><?= $total_cmd ?></div>
+    <div style="color:var(--muted);font-size:.85rem;text-transform:uppercase;">Total Commandes</div>
+  </div>
+  <div class="card" style="text-align:center;">
+    <div style="font-size:2rem;color:var(--neon-pink);"><?= number_format($total_rev, 0, ',', ' ') ?> Ar</div>
+    <div style="color:var(--muted);font-size:.85rem;text-transform:uppercase;">Revenu Total</div>
+  </div>
+  <div class="card" style="text-align:center;">
+    <div style="font-size:2rem;color:var(--neon-purple);"><?= $stats['en_attente'] ?? 0 ?></div>
+    <div style="color:var(--muted);font-size:.85rem;text-transform:uppercase;">En attente</div>
+  </div>
+  <div class="card" style="text-align:center;">
+    <div style="font-size:2rem;color:var(--success);"><?= $stats['livre'] ?? 0 ?></div>
+    <div style="color:var(--muted);font-size:.85rem;text-transform:uppercase;">Livrées</div>
+  </div>
 </div>
 
 <div class="card">
   <h2><i class="fas fa-list"></i> Liste des commandes</h2>
 
+  <?php if (empty($orders)): ?>
+    <div class="empty-state">
+      <div class="ico">📦</div>
+      <p>Aucune commande pour le moment.</p>
+    </div>
+  <?php else: ?>
   <table>
     <tr>
-      <th>Commande</th>
+      <th>N°</th>
       <th>Client</th>
+      <th>Email</th>
       <th>Date</th>
       <th>Montant</th>
+      <th>Paiement</th>
       <th>Statut</th>
       <th>Actions</th>
     </tr>
+    <?php foreach ($orders as $o): ?>
     <tr>
-      <td><span class="order-id">#CMD-1023</span></td>
-      <td>Jean Rakoto</td>
-      <td>23/04/2026</td>
-      <td><span class="order-amount">120 000 Ar</span></td>
-      <td><span class="badge delivered"><i class="fas fa-check"></i> Livrée</span></td>
-      <td><button class="btn btn-primary">Modifier</button></td>
+      <td><span class="order-id">#CMD-<?= $o['id'] ?></span></td>
+      <td><?= htmlspecialchars(($o['prenom_client'] ?? '') . ' ' . ($o['nom_client'] ?? 'Client')) ?></td>
+      <td style="font-size:.85rem;color:var(--muted);"><?= htmlspecialchars($o['email_client'] ?? '-') ?></td>
+      <td style="font-size:.85rem;color:var(--muted);"><?= date('d/m/Y H:i', strtotime($o['date_commande'])) ?></td>
+      <td><span class="order-amount"><?= number_format($o['total'], 0, ',', ' ') ?> Ar</span></td>
+      <td style="font-size:.85rem;"><?= htmlspecialchars($o['mode_paiement'] ?? '-') ?></td>
+      <td>
+        <form method="GET" class="status-form">
+          <input type="hidden" name="update" value="<?= $o['id'] ?>">
+          <select name="statut" onchange="this.form.submit()">
+            <?php foreach (['en_attente','en_cours','expedie','livre','annule'] as $s):
+              $labels = ['en_attente'=>'En attente','en_cours'=>'En cours','expedie'=>'Expédié','livre'=>'Livré','annule'=>'Annulé']; ?>
+              <option value="<?= $s ?>" <?= $o['statut']===$s?'selected':'' ?>><?= $labels[$s] ?></option>
+            <?php endforeach; ?>
+          </select>
+        </form>
+      </td>
+      <td>
+        <a href="commande_details.php?id=<?= $o['id'] ?>" class="btn-s btn-cyan"><i class="fas fa-eye"></i> Détails</a>
+        <a href="commande.php?delete=<?= $o['id'] ?>" class="btn-s btn-pink" onclick="return confirm('Supprimer cette commande ?')"><i class="fas fa-trash"></i></a>
+      </td>
     </tr>
-    <tr>
-      <td><span class="order-id">#CMD-1024</span></td>
-      <td>Marie Rabe</td>
-      <td>23/04/2026</td>
-      <td><span class="order-amount">85 000 Ar</span></td>
-      <td><span class="badge processing"><i class="fas fa-spinner"></i> En cours</span></td>
-      <td><button class="btn btn-primary">Modifier</button></td>
-    </tr>
-    <tr>
-      <td><span class="order-id">#CMD-1025</span></td>
-      <td>Lina Andry</td>
-      <td>22/04/2026</td>
-      <td><span class="order-amount">60 000 Ar</span></td>
-      <td><span class="badge cancelled"><i class="fas fa-times"></i> Annulée</span></td>
-      <td><button class="btn btn-primary">Modifier</button></td>
-    </tr>
-    <tr>
-      <td><span class="order-id">#CMD-1026</span></td>
-      <td>Paul Randria</td>
-      <td>21/04/2026</td>
-      <td><span class="order-amount">45 000 Ar</span></td>
-      <td><span class="badge pending"><i class="fas fa-clock"></i> En attente</span></td>
-      <td><button class="btn btn-primary">Modifier</button></td>
-    </tr>
+    <?php endforeach; ?>
   </table>
+  <?php endif; ?>
 </div>
 
 </div>

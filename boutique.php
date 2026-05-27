@@ -438,24 +438,25 @@
   <div id="payment" class="page">
     <div class="pinner">
       <div class="pt">Finalisation</div>
-      <div id="payForm">
+      <form method="POST" action="paiement.php" id="payForm">
+        <input type="hidden" name="mode_paiement" id="modePaiement" value="">
         <div class="frow">
-          <div class="fg"><label class="fl">Nom</label><input type="text" class="fi" placeholder="Rakoto"></div>
-          <div class="fg"><label class="fl">Prénom</label><input type="text" class="fi" placeholder="Njaka"></div>
+          <div class="fg"><label class="fl">Nom</label><input type="text" name="nom" class="fi" placeholder="Rakoto" required></div>
+          <div class="fg"><label class="fl">Prénom</label><input type="text" name="prenom" class="fi" placeholder="Njaka" required></div>
         </div>
-        <div class="fg"><label class="fl">Email / Téléphone</label><input type="text" class="fi" placeholder="+261 34 00 000 00"></div>
-        <div class="fg"><label class="fl">Adresse de livraison</label><input type="text" class="fi" placeholder="Lot IIY …, Antananarivo"></div>
+        <div class="fg"><label class="fl">Email / Téléphone</label><input type="text" name="email" class="fi" placeholder="+261 34 00 000 00" required></div>
+        <div class="fg"><label class="fl">Adresse de livraison</label><input type="text" name="adresse" class="fi" placeholder="Lot IIY …, Antananarivo" required></div>
         <div class="sdiv"></div>
         <div class="fl" style="margin-bottom:.75rem;">Mode de paiement</div>
         <div class="pgrid">
-          <div class="pm" onclick="selPay(this)"><div class="pmico">💰</div><div class="pmlbl">MVola</div></div>
-          <div class="pm" onclick="selPay(this)"><div class="pmico">🟠</div><div class="pmlbl">Orange Money</div></div>
-          <div class="pm" onclick="selPay(this)"><div class="pmico">🔴</div><div class="pmlbl">Airtel Money</div></div>
-          <div class="pm" onclick="selPay(this)"><div class="pmico">💳</div><div class="pmlbl">Visa / MC</div></div>
+          <div class="pm" onclick="selPay(this,'MVola')"><div class="pmico">💰</div><div class="pmlbl">MVola</div></div>
+          <div class="pm" onclick="selPay(this,'Orange Money')"><div class="pmico">🟠</div><div class="pmlbl">Orange Money</div></div>
+          <div class="pm" onclick="selPay(this,'Airtel Money')"><div class="pmico">🔴</div><div class="pmlbl">Airtel Money</div></div>
+          <div class="pm" onclick="selPay(this,'Visa / Mastercard')"><div class="pmico">💳</div><div class="pmlbl">Visa / MC</div></div>
         </div>
-        <button class="btn-acid" style="width:100%;font-size:.92rem;padding:.95rem;margin-top:1.1rem;" onclick="confirmPay()">Confirmer & Payer</button>
-      </div>
-      <div class="sov" id="payOk">
+        <button type="submit" class="btn-acid" style="width:100%;font-size:.92rem;padding:.95rem;margin-top:1.1rem;">Confirmer & Payer</button>
+      </form>
+      <div class="sov" id="payOk" style="display:none">
         <div class="sico">✓</div>
         <div class="stitle">Commande confirmée !</div>
         <p class="ssub">Merci pour votre achat NJAKA.<br>Livraison sous 24–48h.</p>
@@ -630,7 +631,7 @@ let spinsLeft = 3, curDisc = 0;
 /* NAV */
 function nav(id){document.querySelectorAll('.page').forEach(p=>p.style.display='none');document.getElementById(id).style.display='block';if(id==='cart')renderCart();scrollTo({top:0,behavior:'smooth'});}
 function act(b){document.querySelectorAll('.ntabs button').forEach(x=>x.classList.remove('act'));b.classList.add('act');}
-function selPay(el){document.querySelectorAll('.pm').forEach(m=>m.classList.remove('sel'));el.classList.add('sel');}
+function selPay(el, mode){document.querySelectorAll('.pm').forEach(m=>m.classList.remove('sel'));el.classList.add('sel');document.getElementById('modePaiement').value=mode;}
 
 /* CART */
 function addCart(name,price,orig,img){
@@ -657,13 +658,6 @@ function renderCart(){
   });
   document.getElementById('cartTotal').textContent=tot.toLocaleString()+' Ar';
   sum.style.display='block';
-}
-
-/* PAYMENT */
-function confirmPay(){
-  document.getElementById('payForm').style.display='none';
-  document.getElementById('payOk').style.display='block';
-  setTimeout(()=>{window.location='Ajouterpanier.php?clear=1';},3500);
 }
 
 /* RECLAMATION */
