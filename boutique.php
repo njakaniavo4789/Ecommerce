@@ -1,4 +1,5 @@
 <?php 
+    session_start();
     require 'connectionBD.php';
     $sql="SELECT * FROM produit";
     $stmt=$pdo->prepare($sql);
@@ -8,6 +9,7 @@
     $stmt=$pdo->prepare($sql);
     $stmt->execute();
     $promotions=$stmt->fetchAll();
+    $cartData = $_SESSION['panier'] ?? [];
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -199,7 +201,7 @@
     .pprice{font-family:'Syne',sans-serif;font-size:1.5rem;font-weight:800;color:var(--acid);}
     .pold{font-size:.85rem;color:var(--faint);text-decoration:line-through;}
 
-    .btnadd{width:100%;background:transparent;border:1px solid rgba(255,255,255,.09);color:rgba(240,236,255,.65);font-family:'Space Grotesk',sans-serif;font-size:.83rem;font-weight:600;padding:.82rem;border-radius:var(--rs);cursor:pointer;transition:all .3s;letter-spacing:.3px;}
+    .btnadd{width:100%;display:inline-block;text-align:center;text-decoration:none;background:transparent;border:1px solid rgba(255,255,255,.09);color:rgba(240,236,255,.65);font-family:'Space Grotesk',sans-serif;font-size:.83rem;font-weight:600;padding:.82rem;border-radius:var(--rs);cursor:pointer;transition:all .3s;letter-spacing:.3px;}
     .btnadd:hover{background:var(--acid);color:#000;border-color:var(--acid);box-shadow:0 0 20px var(--acid-glow);}
     .btnadd:active{transform:scale(.97);}
 
@@ -403,9 +405,9 @@
             <span class="pprice"><?= number_format($pFinal,0,',',' ') ?> Ar</span>
             <?php if($red>0): ?><span class="pold"><?= number_format($pOrig,0,',',' ') ?> Ar</span><?php endif; ?>
           </div>
-          <button class="btnadd" onclick="addCart('<?= htmlspecialchars($prod['nom'],ENT_QUOTES) ?>',<?= $pFinal ?>,<?= $pOrig ?>,'<?= htmlspecialchars($imgPath,ENT_QUOTES) ?>')">
-            Ajouter au panier
-          </button>
+          <a class="btnadd" href="Ajouterpanier.php?id=<?= $prod['id'] ?>">
+               Ajouter au panier
+          </a>
         </div>
       </div>
 <?php endforeach; ?>
@@ -611,7 +613,19 @@ const ro=new IntersectionObserver(e=>{e.forEach(v=>{if(v.isIntersecting){v.targe
 document.querySelectorAll('.rv').forEach(el=>ro.observe(el));
 
 /* STATE */
-let cart=[],spinsLeft=3,curDisc=0;
+let cart = <?= json_encode(array_values(array_map(function($item) {
+    return [
+        'cart_id' => $item['id'] . '_' . $item['quantite'],
+        'id'    => (int)$item['id'],
+        'name'  => $item['nom'],
+        'price' => (float)$item['prix'] * (int)$item['quantite'],
+        'orig'  => (float)$item['prix'],
+        'img'   => $item['image'] ?? 'images/placeholder.jpg',
+        'qty'   => (int)$item['quantite'],
+        'disc'  => 0
+    ];
+}, $cartData))) ?>;
+let spinsLeft = 3, curDisc = 0;
 
 /* NAV */
 function nav(id){document.querySelectorAll('.page').forEach(p=>p.style.display='none');document.getElementById(id).style.display='block';if(id==='cart')renderCart();scrollTo({top:0,behavior:'smooth'});}
@@ -624,7 +638,7 @@ function addCart(name,price,orig,img){
   cart.push({name,price:fp,orig,img,id:Date.now(),disc:curDisc});
   updateN();notify('✓',name+' ajouté'+(curDisc>0?' (−'+curDisc+'%)':''));
 }
-function rmCart(id){cart=cart.filter(i=>i.id!==id);updateN();renderCart();notify('✗','Article retiré');}
+function rmCart(id){window.location='Ajouterpanier.php?remove='+id;}
 function updateN(){document.getElementById('cartCount').textContent=cart.length;}
 function renderCart(){
   const box=document.getElementById('cartItems'),sum=document.getElementById('cartSum');
@@ -635,8 +649,9 @@ function renderCart(){
   box.innerHTML='';let tot=0;
   cart.forEach(it=>{
     tot+=it.price;const d=document.createElement('div');d.className='ci';
-    d.innerHTML=`<img src="${it.img}" alt="${it.name}" onerror="this.src='images/placeholder.jpg'">
-      <div class="ci-info"><div class="ci-name">${it.name}</div><div class="ci-price">${it.price.toLocaleString()} Ar</div>${it.disc>0?`<div class="ci-disc">−${it.disc}% appliqué</div>`:''}</div>
+    const qtyHtml = it.qty > 1 ? `<div style="color:var(--muted);font-size:.75rem;margin-top:3px;">Qté: ${it.qty} × ${it.orig.toLocaleString()} Ar</div>` : '';
+      d.innerHTML=`<img src="${it.img}" alt="${it.name}" onerror="this.src='images/placeholder.jpg'">
+      <div class="ci-info"><div class="ci-name">${it.name}</div><div class="ci-price">${it.price.toLocaleString()} Ar</div>${qtyHtml}</div>
       <button class="btnrm" onclick="rmCart(${it.id})">Retirer</button>`;
     box.appendChild(d);
   });
@@ -648,7 +663,7 @@ function renderCart(){
 function confirmPay(){
   document.getElementById('payForm').style.display='none';
   document.getElementById('payOk').style.display='block';
-  setTimeout(()=>{cart=[];updateN();nav('shop');document.getElementById('payForm').style.display='block';document.getElementById('payOk').style.display='none';notify('🎉','Commande confirmée !');},3500);
+  setTimeout(()=>{window.location='Ajouterpanier.php?clear=1';},3500);
 }
 
 /* RECLAMATION */
@@ -691,6 +706,7 @@ function notify(icon,msg){
 }
 
 startCD();startFlash();updateN();
+if(cart.length)renderCart();
 </script>
 </body>
 </html>
